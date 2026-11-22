@@ -1,4 +1,4 @@
-const CACHE = 'market-calc-v1';
+const CACHE = 'market-calc-v2';
 const ASSETS = ['./', './index.html', './calc.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

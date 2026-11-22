@@ -31,3 +31,9 @@ export function convertPrice(value, from, to) {
 export function floorYuan(value) {
   return Math.floor(value + 1e-9);
 }
+
+/** 抹零提示：只有抹掉 ≥1 元且确实有零头时才值得显示；否则返回 NaN。 */
+export function floorHint(total) {
+  const y = floorYuan(total);
+  return y >= 1 && y < total ? y : NaN;
+}

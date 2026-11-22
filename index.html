@@ -86,7 +86,7 @@
   <div id="sub"></div>
 </main>
 <script type="module">
-import { GRAMS, parseAmount, cost, gramsFor, floorYuan, convertWeight, convertPrice } from './calc.js';
+import { GRAMS, parseAmount, cost, gramsFor, floorHint, convertWeight, convertPrice } from './calc.js';
 
 const $ = id => document.getElementById(id);
 const price = $('price'), amount = $('amount'), aunit = $('aunit');
@@ -112,8 +112,9 @@ function render() {
     sub.textContent = `≈ ${trim(g / GRAMS['公斤'])} 公斤`;
   } else {
     const total = cost(p, punit, a, aunit.value);
+    const hint = floorHint(total);
     result.textContent = `${total.toFixed(2)} 元`;
-    sub.textContent = `抹零 ≈ ${floorYuan(total)} 元`;
+    sub.textContent = Number.isNaN(hint) ? '' : `抹零 ≈ ${hint} 元`;
   }
 }
 

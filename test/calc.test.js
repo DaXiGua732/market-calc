@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GRAMS, parseAmount, cost, gramsFor, floorYuan, convertWeight, convertPrice } from '../calc.js';
+import { GRAMS, parseAmount, cost, gramsFor, floorYuan, floorHint, convertWeight, convertPrice } from '../calc.js';
 
 test('单位基准', () => {
   assert.deepEqual(GRAMS, { 斤: 500, 两: 50, 钱: 5, 公斤: 1000, 克: 1 });
@@ -48,4 +48,12 @@ test('抹零不因浮点误差多减一元', () => {
   assert.equal(floorYuan(6), 6);
   assert.equal(floorYuan(5.999999999999), 6);
   assert.equal(floorYuan(0.99), 0);
+});
+
+test('抹零提示只在真能抹掉整元时出现', () => {
+  assert.equal(floorHint(6.83), 6);
+  assert.equal(floorHint(12.5), 12);
+  assert.equal(Number.isNaN(floorHint(6)), true);
+  assert.equal(Number.isNaN(floorHint(0.6)), true);
+  assert.equal(Number.isNaN(floorHint(0.99)), true);
 });
