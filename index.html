@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>菜场计算器</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<style>
+  :root {
+    --fg: #111;
+    --muted: #5b5b5b;
+    --line: #d8d8d8;
+    --accent: #0a6b3d;
+    --surface: #f5f5f2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font: 18px/1.4 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--fg);
+    background: #fff;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 520px; margin: 0 auto; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .row > label { flex: 0 0 3.5em; font-weight: 600; }
+  input, select, button { font: inherit; }
+  input {
+    flex: 1 1 auto; min-width: 0;
+    height: 56px; padding: 0 12px;
+    font-size: 24px; font-variant-numeric: tabular-nums;
+    border: 2px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--fg);
+  }
+  input:focus, select:focus, button:focus-visible {
+    outline: 3px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+  }
+  select {
+    flex: 0 0 auto; height: 56px; padding: 0 8px;
+    font-size: 18px; border: 2px solid var(--line); border-radius: 10px;
+    background: var(--surface); color: var(--fg);
+  }
+  .seg { display: flex; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; flex: 0 0 auto; }
+  .seg button {
+    min-height: 52px; padding: 0 10px; border: 0;
+    background: var(--surface); color: var(--muted);
+    font-size: 16px; cursor: pointer;
+  }
+  .seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+  #mode {
+    width: 100%; min-height: 48px; margin-bottom: 18px;
+    border: 2px solid var(--line); border-radius: 10px;
+    background: #fff; color: var(--fg); font-size: 17px; cursor: pointer;
+  }
+  #mode[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  #result {
+    display: block; font-size: 52px; line-height: 1.1; font-weight: 700;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+    padding: 8px 0; word-break: break-all;
+  }
+  #sub { font-size: 20px; color: var(--muted); min-height: 1.4em; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main>
+  <div class="row">
+    <label for="price">单价</label>
+    <input id="price" inputmode="decimal" enterkeyhint="next" placeholder="0" autocomplete="off">
+    <div class="seg" role="group" aria-label="单价单位">
+      <button type="button" data-punit="斤" class="on">元/斤</button>
+      <button type="button" data-punit="公斤">元/公斤</button>
+    </div>
+  </div>
+  <div class="row">
+    <label for="amount" id="amountLabel">重量</label>
+    <input id="amount" inputmode="decimal" enterkeyhint="done" placeholder="0" autocomplete="off">
+    <select id="aunit" aria-label="重量单位">
+      <option>斤</option><option>两</option><option>钱</option><option>公斤</option><option>克</option>
+    </select>
+  </div>
+  <button type="button" id="mode" aria-pressed="false">按金额算</button>
+  <output id="result">—</output>
+  <div id="sub"></div>
+</main>
+<script type="module">
+import { GRAMS, parseAmount, cost, gramsFor, floorYuan, convertWeight, convertPrice } from './calc.js';
+
+const $ = id => document.getElementById(id);
+const price = $('price'), amount = $('amount'), aunit = $('aunit');
+const result = $('result'), sub = $('sub'), mode = $('mode'), amountLabel = $('amountLabel');
+const segButtons = [...document.querySelectorAll('[data-punit]')];
+
+let punit = '斤';
+let reverse = false;
+
+const trim = n => String(+n.toFixed(2));
+
+function render() {
+  const p = parseAmount(price.value);
+  const a = parseAmount(amount.value);
+  if (Number.isNaN(p) || Number.isNaN(a)) {
+    result.textContent = '—';
+    sub.textContent = '';
+    return;
+  }
+  if (reverse) {
+    const g = gramsFor(a, p, punit);
+    result.textContent = `${trim(g / GRAMS['斤'])} 斤`;
+    sub.textContent = `≈ ${trim(g / GRAMS['公斤'])} 公斤`;
+  } else {
+    const total = cost(p, punit, a, aunit.value);
+    result.textContent = `${total.toFixed(2)} 元`;
+    sub.textContent = `抹零 ≈ ${floorYuan(total)} 元`;
+  }
+}
+
+// 单位切换时换算已填数值，避免切换后数字含义被静默改变
+function convert(input, fn, from, to) {
+  const v = parseAmount(input.value);
+  if (!Number.isNaN(v)) input.value = trim(fn(v, from, to));
+}
+
+for (const btn of segButtons) {
+  btn.addEventListener('click', () => {
+    const next = btn.dataset.punit;
+    if (next === punit) return;
+    convert(price, convertPrice, punit, next);
+    punit = next;
+    for (const b of segButtons) b.classList.toggle('on', b === btn);
+    render();
+  });
+}
+
+aunit.addEventListener('change', () => {
+  const prev = aunit.dataset.prev ?? '斤';
+  if (!reverse) convert(amount, convertWeight, prev, aunit.value);
+  aunit.dataset.prev = aunit.value;
+  render();
+});
+
+mode.addEventListener('click', () => {
+  reverse = !reverse;
+  mode.setAttribute('aria-pressed', String(reverse));
+  amountLabel.textContent = reverse ? '金额' : '重量';
+  aunit.disabled = reverse;
+  amount.placeholder = reverse ? '0' : '0';
+  render();
+});
+
+price.addEventListener('input', render);
+amount.addEventListener('input', render);
+render();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
